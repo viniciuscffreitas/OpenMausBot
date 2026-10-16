@@ -242,13 +242,12 @@ describe("turn boundary", () => {
     expect(rows.map((r) => [r.path, r.kind, r.actor, r.via, r.threadId])).toEqual([
       [MEMORY_INDEX, "edited", "bot", "turn", "thread-a"],
       ["memory/existing.md", "edited", "bot", "turn", "thread-a"],
-      ["memory/log/2026-09-10.md", "created", "bot", "turn", "thread-a"],
     ]);
     expect(endMemoryTurn("thread-a")).toEqual([]);
     beginMemoryTurn(bot, "thread-b");
     expect(endMemoryTurn("thread-b")).toEqual([]);
     await flushMemoryJournal(bot);
-    expect(readMemoryJournal(bot, 10)).toHaveLength(3);
+    expect(readMemoryJournal(bot, 10)).toHaveLength(2);
   });
 
   it("attributes an edit made outside the app between turns to the person, via disk", async () => {
@@ -347,26 +346,34 @@ describe("turn boundary", () => {
     expect(readMemoryJournal(bot, 10).map((row) => [row.path, row.kind, row.actor])).toEqual([["memory/locked.md", "edited", "person"]]);
   });
 
-  it("journals the daily-log line a settled turn leaves as that turn's, so the next turn never credits the person", async () => {
+  it("never journals the daily logs, whoever writes them", async () => {
     const bot = freshBot();
     ensureWorkspace(bot);
-    const now = new Date(2026, 9, 13, 9, 30);
+    const now = new Date(2026, 9, 14, 9, 30);
     const path = memoryLogPath(now);
-    for (const threadId of ["chat-1", "room-1"]) {
-      beginMemoryTurn(bot, threadId);
-      endMemoryTurn(threadId);
-      const result = journalTurnWrite(bot, path, threadId, () => appendMemoryLog(bot, `turn on ${threadId}`, { now, source: threadId === "room-1" ? 'room "Launch"' : 'chat "Plan"' }));
-      expect(result).toMatchObject({ ok: true, file: path });
-    }
+    beginMemoryTurn(bot, "chat-1");
+    endMemoryTurn("chat-1");
+    journalTurnWrite(bot, path, "chat-1", () => appendMemoryLog(bot, "turn on chat-1", { now, source: 'chat "Plan"' }));
+    appendMemoryLog(bot, "line the journal never saw", { now, source: 'chat "Plan"' });
     beginMemoryTurn(bot, "chat-2");
-    expect(endMemoryTurn("chat-2")).toEqual([]);
+    writeFileSync(join(workspaceDir(bot), "MEMORY.md"), "- learned\n");
+    const rows = endMemoryTurn("chat-2");
     await flushMemoryJournal(bot);
-    const rows = readMemoryJournal(bot, 10).filter((row) => row.path === path);
-    expect(rows.map((row) => [row.actor, row.via, row.threadId, row.kind]).sort()).toEqual([
-      ["bot", "turn", "chat-1", "created"],
-      ["bot", "turn", "room-1", "edited"],
-    ]);
-    expect(readMemoryJournal(bot, 10).some((row) => row.actor === "person")).toBe(false);
+    expect(rows.map((row) => row.path)).toEqual([MEMORY_INDEX]);
+    expect(readMemoryJournal(bot, 10).map((row) => row.path)).toEqual([MEMORY_INDEX]);
+  });
+
+  it("still journals a person's log edit, and the next turn does not call that log deleted", async () => {
+    const bot = freshBot();
+    ensureWorkspace(bot);
+    const path = memoryLogPath(new Date(2026, 9, 14, 9, 30));
+    mkdirSync(join(workspaceDir(bot), "memory", "log"), { recursive: true });
+    const { entry } = journalMemoryWrite(bot, path, "- fixed by hand\n", { actor: "person", via: "ui" });
+    expect(entry).toMatchObject({ path, actor: "person" });
+    beginMemoryTurn(bot, "chat-1");
+    expect(endMemoryTurn("chat-1")).toEqual([]);
+    await flushMemoryJournal(bot);
+    expect(readMemoryJournal(bot, 10).map((row) => [row.path, row.kind, row.actor])).toEqual([[path, "created", "person"]]);
   });
 
   it("hands back the write's own result when the journal cannot read the file", () => {

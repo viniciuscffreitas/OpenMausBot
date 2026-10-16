@@ -186,9 +186,13 @@ export function memoryFilesOnDisk(botId: string): Array<{ path: string; mtimeMs:
 
 const memoryIndexDates = new Map<string, string>();
 
+export function isMemoryLogPath(path: string): boolean {
+  return path.startsWith(`memory/${MEMORY_LOG_DIR}/`);
+}
+
 function searchableMemoryText(path: string, text: string): string {
   if (path === "MEMORY.md" && text === MEMORY_SEED) return "";
-  if (path === "memory/archive.md" || path.startsWith(`memory/${MEMORY_LOG_DIR}/`)) return text;
+  if (path === "memory/archive.md" || isMemoryLogPath(path)) return text;
   return withoutSuperseded(withoutExpired(text, memoryDate()).text);
 }
 

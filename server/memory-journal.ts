@@ -16,7 +16,7 @@ import {
   writeMemoryDoc,
 } from "./memory-store.ts";
 import { redactSecretsInText } from "./redact.ts";
-import { memoryFilesOnDisk, readMemoryText, workspaceDir } from "./workspace.ts";
+import { isMemoryLogPath, memoryFilesOnDisk, readMemoryText, workspaceDir } from "./workspace.ts";
 
 export type MemoryActor = "bot" | "person" | "import" | "upkeep";
 export type MemoryChangeKind = "created" | "edited" | "deleted";
@@ -247,7 +247,9 @@ function baselineFor(botId: string): Map<string, string> {
   return baseline;
 }
 
+// Turns never diff the daily logs: each turn appends a line and the row would carry the whole log.
 function advanceBaseline(botId: string, path: string, after: string | null): void {
+  if (isMemoryLogPath(path)) return;
   const baseline = baselineFor(botId);
   if (after === null) baseline.delete(path);
   else baseline.set(path, after);
@@ -369,6 +371,7 @@ function currentDocs(botId: string): Map<string, string> {
   const baseline = baselines.get(botId);
   const seen = new Set<string>();
   for (const file of memoryFilesOnDisk(botId)) {
+    if (isMemoryLogPath(file.path)) continue;
     seen.add(file.path);
     const mtimeMs = Math.trunc(file.mtimeMs);
     const cached = stats.get(file.path);
@@ -447,6 +450,7 @@ export function endMemoryTurn(threadId: string): MemoryJournalEntry[] {
 
 /** Lands after the turn's boundary diff, so without its own row the next turn would credit it to the person. */
 export function journalTurnWrite<T>(botId: string, path: string, threadId: string, write: () => T): T {
+  if (isMemoryLogPath(path)) return write();
   let before: string | null | undefined;
   try {
     const doc = readMemoryDoc(botId, path);
