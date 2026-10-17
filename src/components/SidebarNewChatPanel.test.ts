@@ -4,13 +4,14 @@ import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const fixture = vi.hoisted(() => ({ dispatch: vi.fn(), showThreads: true }));
+const fixture = vi.hoisted(() => ({ dispatch: vi.fn(), showThreads: true, showTeam: true }));
 vi.mock("@/state/store", async (importOriginal) => ({
   ...await importOriginal<typeof import("@/state/store")>(),
   useStore: () => ({
     state: {
+      config: { features: { skillAuthoring: true, showTeam: fixture.showTeam } },
       bots: [
-        { id: "scout", name: "Scout", title: "Research", description: "", color: "blue", hidden: false,
+        { id: "scout", name: "Scout", title: "Research", description: "", color: "blue", hidden: false, chiefOfStaff: true,
           threadId: "older", mainThreadId: "latest", tasks: [{ threadId: "older" }, { threadId: "latest" }] },
         { id: "quill", name: "Quill", title: "", description: "Writes the newsletter\nand more", color: "pink", hidden: false },
         { id: "ghost", name: "Ghost", title: "", description: "", color: "green", hidden: true },
@@ -64,6 +65,7 @@ describe("SidebarNewChatPanel", () => {
     root = undefined;
     fixture.dispatch.mockReset();
     fixture.showThreads = true;
+    fixture.showTeam = true;
   });
 
   function open() {
@@ -92,6 +94,15 @@ describe("SidebarNewChatPanel", () => {
     expect(text).not.toContain("Writes the newsletter");
     expect(container!.querySelector("[aria-label^='Quill, Writes the newsletter']")).not.toBeNull();
     expect(text).not.toContain("Ghost");
+  });
+
+  it("offers only the chiefs while the team is hidden, and finds the rest by name", () => {
+    fixture.showTeam = false;
+    const { input } = open();
+    expect(container!.textContent).toContain("Scout");
+    expect(container!.textContent).not.toContain("Quill");
+    type(input, "qu");
+    expect(container!.textContent).toContain("Quill");
   });
 
   it("starts a new thread with the first bot on Enter", () => {

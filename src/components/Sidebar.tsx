@@ -37,7 +37,8 @@ import {
 import { api, useStore, formatTime, visibleMessages, currentTaskBot, botOpensTo, openBot, openThread, type Action, type AppState, type Bot, type BotProject, type Group, type InstanceInfo, type Message } from "@/state/store";
 import { approvalModeFor } from "../../shared/approval-mode";
 import { liveActivityLabel } from "@/lib/live-activity";
-import { llmThreadTitlesEnabled } from "@/lib/feature-flags";
+import { llmThreadTitlesEnabled, showTeamEnabled } from "@/lib/feature-flags";
+import { visibleBots } from "../../shared/visibility";
 
 import { BotAvatar } from "./Avatar";
 import { stateForBot } from "@/lib/mascot";
@@ -1827,8 +1828,7 @@ export function Sidebar({ open, onClose, collapseToIcons = false }: {
 
   const q = query.trim().toLowerCase();
 
-  const matchingBots = state.bots
-    .filter((b) => !b.hidden)
+  const matchingBots = visibleBots(state.bots.filter((b) => !b.hidden), { showTeam: showTeamEnabled(state.config), searching: Boolean(q) })
     .filter(
       (b) =>
         !q ||

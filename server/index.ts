@@ -13230,7 +13230,7 @@ function configStatus() {
       autoRecall: autoRecallEnabled(cfg),
       roomMemoryCapture: roomMemoryCaptureEnabled(cfg),
       parallelRoomJobs: parallelRoomJobsEnabled(cfg),
-      llmThreadTitles: llmThreadTitlesEnabled(cfg),
+      llmThreadTitles: llmThreadTitlesEnabled(cfg), showTeam: cfg.features?.showTeam === true,
     },
     onboarding: {
       completedAt: cfg.onboarding?.completedAt ?? "",

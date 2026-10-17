@@ -54,6 +54,7 @@ const atlasMessages = [reply("a1", undefined, "Hello"), reply("a2", "a1", "Done 
 let state: AppState = {
   ...initialState,
   connected: true,
+  config: { features: { skillAuthoring: true, showTeam: true } } as AppState["config"],
   selectedId: "atlas",
   activeView: "chat",
   bots: [

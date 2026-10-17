@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Archive, CircleUser, Coins, FlaskConical, KeyRound, LockKeyhole, Monitor, Palette, ScrollText, Search, Sparkles, TabletSmartphone, Terminal, User, Users, X, Building2, Zap, BookOpen } from "lucide-react";
 import { api, useStore, type AppSettingsSection, type ConfigStatus } from "@/state/store";
-import { builtInBrowserEnabled, routinesInConversationEnabled, showToolCallsEnabled, skillAuthoringEnabled, skillsLibraryEnabled } from "@/lib/feature-flags";
+import { builtInBrowserEnabled, routinesInConversationEnabled, showTeamEnabled, showToolCallsEnabled, skillAuthoringEnabled, skillsLibraryEnabled } from "@/lib/feature-flags";
 import { localeChoices, type LocaleKey } from "@/locales";
 import { t } from "@/lib/i18n";
 import { withTourReset } from "@/lib/guided-tour";
@@ -30,6 +30,7 @@ import { OrganizationSettings } from "./OrganizationSettings";
 import { CloudAccountSettings } from "./CloudAccountSettings";
 import { ProSettingsCard } from "./ProIntroduction";
 import { Card, SettingRow, Switch } from "./SettingsPrimitives";
+import { FeatureSwitchRow } from "./FeatureSwitchRow";
 import { LearnedSkillsSettings } from "./ShareLearnedSkillsSettings";
 import { effortLabel } from "./ModelPicker";
 import { EFFORT_LEVELS, isEffortLevel } from "../../shared/wire";
@@ -535,43 +536,18 @@ function RoutinesInConversationRow() {
   );
 }
 
+function ShowTeamRow() {
+  const { state } = useStore();
+  const title = t("settings.showTeam.title");
+  return <FeatureSwitchRow feature="showTeam" enabled={showTeamEnabled(state.config)} title={title} subtitle={t("settings.showTeam.subtitle")} ariaLabel={title} errorText={t("settings.showTeam.error")} />;
+}
+
 function ToolCallsRow() {
-  const { state, dispatch } = useStore();
-  const enabled = showToolCallsEnabled(state.config);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  const toggle = async () => {
-    if (saving) return;
-    setSaving(true);
-    setError("");
-    try {
-      const config: ConfigStatus = await api("/api/config", {
-        method: "PATCH",
-        body: JSON.stringify({ features: { showToolCalls: !enabled } }),
-      });
-      dispatch({ type: "configStatus", config });
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : t("settings.toolCalls.error"));
-    } finally {
-      setSaving(false);
-    }
-  };
-
+  const { state } = useStore();
   return (
-    <SettingRow
-      title={t("settings.toolCalls.title")}
+    <FeatureSwitchRow feature="showToolCalls" enabled={showToolCallsEnabled(state.config)} title={t("settings.toolCalls.title")}
       subtitle={<>{t("settings.toolCalls.subtitle")} {t("settings.toolCalls.detail")}</>}
-      message={error ? <p role="alert" className="text-danger">{error}</p> : null}
-    >
-      <Switch
-        checked={enabled}
-        aria-label={t("settings.toolCalls.aria")}
-        disabled={saving}
-        onClick={() => void toggle()}
-        className="disabled:cursor-wait disabled:opacity-50"
-      />
-    </SettingRow>
+      ariaLabel={t("settings.toolCalls.aria")} errorText={t("settings.toolCalls.error")} />
   );
 }
 
@@ -832,6 +808,7 @@ export function SettingsModal() {
             {advanced && <ShowThreadsRow />}
             <PinnedCirclesRow />
             <UniversalPinsRow />
+            <ShowTeamRow />
             <NotificationRows />
             {!remoteActive && <ToolCallsRow />}
             <RunCardRow />

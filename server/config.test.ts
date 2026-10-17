@@ -634,6 +634,10 @@ describe("configuration boundaries", () => {
     expect(showToolCallsEnabled({ features: { showToolCalls: true } })).toBe(true);
   });
 
+  it("accepts showing the whole team", () => {
+    expect(parseConfigPatch({ features: { showTeam: true } })).toEqual({ features: { showTeam: true } });
+  });
+
   it.each([0, 1.5, 9, "2", null])("rejects an invalid per-bot VM limit: %j", (maxInstances) => {
     expect(() => parseConfigPatch({ localVm: { maxInstances } })).toThrow("localVm.maxInstances");
   });
